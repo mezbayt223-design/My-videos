@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: #0d1527; color: #fff; padding-bottom: 80px; user-select: none; }
+        
+        /* HEADER */
+        .top-bar { background: #111c35; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #1e2d4a; }
+        .balance-badge { background: #f59e0b; color: #000; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
+        .premium-top { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; padding: 6px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; border: none; cursor: pointer; }
+
+        /* VIEWS */
+        .view { display: none; padding: 15px; }
+        .active-view { display: block; }
+        .title { font-size: 15px; font-weight: bold; margin-bottom: 10px; color: #f1f5f9; }
+
+        /* CARDS & PREMIUM PLAY BUTTON */
+        .card { background: #162238; border-radius: 12px; overflow: hidden; border: 1px solid #233554; margin-bottom: 14px; position: relative; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .thumb { width: 100%; height: 170px; background: #000; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .thumb video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        
+        /* Ultra-Clean Modern Glass Play Button */
+        .play-btn { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: 58px; height: 58px; 
+            background: rgba(0, 0, 0, 0.5); 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            color: #ffffff; font-size: 20px; padding-left: 3px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5), inset 0 0 12px rgba(255,255,255,0.25); 
+            border: 2px solid rgba(255, 255, 255, 0.4); 
+            z-index: 3; transition: all 0.25s ease; 
+        }
+        .card:hover .play-btn { transform: translate(-50%, -50%) scale(1.12); background: rgba(245, 158, 11, 0.95); color: #000; border-color: #fff; box-shadow: 0 10px 30px rgba(245,158,11,0.6); }
+
+        .card-txt { padding: 12px; font-size: 14px; font-weight: bold; }
+        .vip-badge { position: absolute; top: 10px; right: 10px; background: #ef4444; padding: 4px 8px; font-size: 10px; border-radius: 6px; font-weight: bold; z-index: 4; box-shadow: 0 2px 8px rgba(239,68,68,0.4); }
+
+        /* BOX & BUTTONS */
+        .box { background: #162238; padding: 12px; border-radius: 8px; border: 1px solid #233554; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { background: #0284c7; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn:disabled { opacity: 0.5; }
+        
+        .input-box { width: 100%; padding: 8px; margin: 6px 0; background: #0d1527; color: #fff; border: 1px solid #233554; border-radius: 5px; }
+        .sub-desc { font-size: 10px; color: #38bdf8; margin-top: 3px; font-weight: 500; }
+
+        /* FOOTER NAV */
+        .footer { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: #111c35; display: flex; z-index: 9999; border-top: 1px solid #1e2d4a; }
+        .nav-item { flex: 1; border: none; background: transparent; color: #94a3b8; font-weight: bold; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .nav-item.active { color: #f59e0b; background: #0d1527; border-top: 2px solid #f59e0b; }
+    </style>
+</head>
+<body>
+
+    <!-- TOP HEADER -->
+    <div class="top-bar">
+        <button class="premium-top" onclick="switchTab('shop')">👑 Premium Join Now</button>
+        <div class="balance-badge">🪙 <span id="coin-balance">0</span> Ass Coin</div>
+    </div>
+
+    <!-- HOME TAB -->
+    <div id="view-home" class="view active-view">
+        <div class="title">🔥 Trending Exclusive Videos</div>
+        <div class="card" onclick="openPlayer('VIP Video', 'https://cdn.jsdelivr.net/gh/mezbayt223-design/My-videos@main/1788669284257.mp4')">
+            <div class="thumb">
+                <video src="https://cdn.jsdelivr.net/gh/mezbayt223-design/My-videos@main/1788669284257.mp4#t=1.0" preload="metadata" muted></video>
+                <div class="play-btn">▶</div>
+            </div>
+            <div class="card-txt">VIP Video</div>
+        </div>
+    </div>
+
+    <!-- VIP VIDEOS TAB -->
+    <div id="view-vip" class="view">
+        <div class="title">🔒 VIP Exclusive Videos</div>
+        <div id="vip-videos-container"></div>
+    </div>
+
+    <!-- PLAYER TAB -->
+    <div id="view-detail" class="view">
+        <div id="player-container" style="width:100%; height:200px; background:#000; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:10px;"></div>
+        <h3 id="video-name" style="margin-bottom:15px; font-size: 15px;">Video Title</h3>
+        
+        <div class="title" style="margin-top:20px;">📺 Related Videos</div>
+        <div class="card" onclick="openPlayer('VIP Video', 'https://cdn.jsdelivr.net/gh/mezbayt223-design/My-videos@main/1788669284257.mp4')">
+            <div class="thumb" style="height:100px;">
+                <video src="https://cdn.jsdelivr.net/gh/mezbayt223-design/My-videos@main/1788669284257.mp4#t=1.0" preload="metadata" muted></video>
+                <div class="play-btn" style="width:36px; height:36px; font-size:14px;">▶</div>
+            </div>
+            <div class="card-txt" style="font-size:12px;">VIP Video</div>
+        </div>
+    </div>
+
+    <!-- TASKS TAB -->
+    <div id="view-task" class="view">
+        <div class="title">⚡ Earn Free Ass Coins</div>
+        <div class="box">
+            <div><h4>Watch Ad 1</h4><p style="color:#22c55e; font-size:11px;">+50 Coins</p></div>
+            <button class="btn task-btn" onclick="runTask(this, 15, 50, 'Watch Ad')">Watch Ad</button>
+        </div>
+        <div class="box">
+            <div><h4>Watch Ad 2</h4><p style="color:#22c55e; font-size:11px;">+50 Coins</p></div>
+            <button class="btn task-btn" onclick="runTask(this, 15, 50, 'Watch Ad')">Watch Ad</button>
+        </div>
+        <div class="box">
+            <div><h4>Click ads earn 100 Ass Coin</h4><p style="color:#f97316; font-size:11px;">+100 Coins</p></div>
+            <button class="btn task-btn" style="background:#16a34a;" onclick="runTask(this, 15, 100, 'Click Ad')">Click Ad</button>
+        </div>
+        <div class="box">
+            <div><h4>Click ads earn 100 Ass Coin</h4><p style="color:#f97316; font-size:11px;">+100 Coins</p></div>
+            <button class="btn task-btn" style="background:#16a34a;" onclick="runTask(this, 15, 100, 'Click Ad')">Click Ad</button>
+        </div>
+    </div>
+
+    <!-- SHOP TAB -->
+    <div id="view-shop" class="view">
+        <div class="title">👑 VIP Subscriptions</div>
+        
+        <div class="box" style="border-color:#f59e0b;">
+            <div>
+                <h4 style="color:#f59e0b;">1 Day Pass</h4>
+                <p style="font-size:11px; color:#94a3b8;">VIP Videos for 24h</p>
+                <div class="sub-desc">Buy Premium Enjoy no ads video</div>
+            </div>
+            <button class="btn" style="background:#f59e0b;" onclick="buyPremium(1500, 1, '1 Day Pass')">1,500 Coin</button>
+        </div>
+
+        <div class="box" style="border-color:#f59e0b;">
+            <div>
+                <h4 style="color:#f59e0b;">7 Days Pass</h4>
+                <p style="font-size:11px; color:#94a3b8;">VIP Videos for 1 Week</p>
+                <div class="sub-desc">Buy Premium Enjoy no ads video</div>
+            </div>
+            <button class="btn" style="background:#f59e0b;" onclick="buyPremium(7500, 7, '7 Days Pass')">7,500 Coin</button>
+        </div>
+
+        <div class="box" style="border-color:#f59e0b;">
+            <div>
+                <h4 style="color:#f59e0b;">30 Days Pass</h4>
+                <p style="font-size:11px; color:#94a3b8;">VIP Videos for 1 Month</p>
+                <div class="sub-desc">Buy Premium Enjoy no ads video</div>
+            </div>
+            <button class="btn" style="background:#f59e0b;" onclick="buyPremium(25000, 30, '30 Days Pass')">25,000 Coin</button>
+        </div>
+
+        <div class="box" style="border-color:#ef4444;">
+            <div>
+                <h4 style="color:#ef4444;">Lifetime VIP</h4>
+                <p style="font-size:11px; color:#94a3b8;">Unlimited Access</p>
+                <div class="sub-desc">Buy Premium Enjoy no ads video</div>
+            </div>
+            <button class="btn" style="background:#ef4444;" onclick="buyPremium(100000, 36500, 'Lifetime')">100,000 Coin</button>
+        </div>
+
+        <div class="title" style="color:#eab308; margin-top:15px;">⭐ Buy with Telegram Stars (+20% Bonus)</div>
+        <div class="box" style="border-color:#eab308;">
+            <div><h4 style="color:#eab308;">Starter Pack</h4><p style="font-size:11px; color:#94a3b8;">1,200 Coins (1,000 + 20% Bonus)</p></div>
+            <button class="btn" style="background:#eab308; color:#000;" onclick="buyWithStars(100, 1200)">100 Stars</button>
+        </div>
+        <div class="box" style="border-color:#eab308;">
+            <div><h4 style="color:#eab308;">Pro Pack</h4><p style="font-size:11px; color:#94a3b8;">3,600 Coins (3,000 + 20% Bonus)</p></div>
+            <button class="btn" style="background:#eab308; color:#000;" onclick="buyWithStars(300, 3600)">300 Stars</button>
+        </div>
+        <div class="box" style="border-color:#eab308;">
+            <div><h4 style="color:#eab308;">Mega Pack</h4><p style="font-size:11px; color:#94a3b8;">6,000 Coins (5,000 + 20% Bonus)</p></div>
+            <button class="btn" style="background:#eab308; color:#000;" onclick="buyWithStars(500, 6000)">500 Stars</button>
+        </div>
+
+        <div class="title" style="color:#38bdf8; margin-top:15px;">💎 TON Wallet & Instant Deposit (+20% Bonus)</div>
+        <div style="background:#162238; padding:12px; border-radius:8px;">
+            <input type="number" id="dep-amt" class="input-box" placeholder="Enter TON Amount (e.g. 1)" oninput="calcDep()">
+            <p id="dep-res" style="font-size:11px; color:#22c55e; margin-bottom:8px;">Coins to receive: 0 (Includes 20% Bonus)</p>
+            
+            <button class="btn" style="width:100%; background:#0284c7; margin-bottom:8px;" onclick="openTonkeeper()">1. Send TON via Tonkeeper</button>
+            
+            <input type="text" id="tx-hash-input" class="input-box" placeholder="Paste Transaction Hash (TxID) here">
+            <button class="btn" style="width:100%; background:#16a34a;" onclick="verifyAndClaim()">2. Verify Hash & Claim Coins</button>
+        </div>
+    </div>
+
+    <!-- FOOTER NAV -->
+    <div class="footer">
+        <button id="nav-home" class="nav-item active" onclick="switchTab('home')">Home</button>
+        <button id="nav-vip" class="nav-item" onclick="switchTab('vip')">VIP Videos</button>
+        <button id="nav-task" class="nav-item" onclick="switchTab('task')">Tasks</button>
+        <button id="nav-shop" class="nav-item" onclick="switchTab('shop')">Shop</button>
+    </div>
+
+    <script>
+        if (window.Telegram && window.Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        }
+
+        var coins = 0;
+        var vipExpiry = null;
+        var WALLET = "UQAWiAk0m4LzBARfXX-8U8UU49DjyOFR8uWlEivyh_hZ765E";
+        var usedHashes = JSON.parse(localStorage.getItem('used_hashes') || '[]');
+
+        function updateUI() {
+            document.getElementById('coin-balance').innerText = coins;
+            renderVipVideos();
+        }
+
+        function isVip() {
+            return vipExpiry && new Date().getTime() < vipExpiry;
+        }
+
+        function renderVipVideos() {
+            var container = document.getElementById('vip-videos-container');
+            var videoUrl = 'https://cdn.jsdelivr.net/gh/mezbayt223-design/My-videos@main/1788669284257.mp4';
+            
+            if (isVip()) {
+                container.innerHTML = `
+                    <div class="card" onclick="openPlayer('VIP Content Stream 1', '${videoUrl}')">
+                        <div class="thumb">
+                            <video src="${videoUrl}#t=1.0" preload="metadata" muted></video>
+                            <div class="play-btn">▶</div>
+                        </div>
+                        <div class="card-txt">VIP Content Stream 1</div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="card" onclick="playVipVideo('VIP Content Stream 1', '${videoUrl}')">
+                        <div class="vip-badge">🔒 1,500 Coins</div>
+                        <div class="thumb">
+                            <video src="${videoUrl}#t=1.0" preload="metadata" muted></video>
+                            <div class="play-btn">▶</div>
+                        </div>
+                        <div class="card-txt">VIP Content Stream 1</div>
+                    </div>
+                `;
+            }
+        }
+
+        function switchTab(tab) {
+            var views = document.querySelectorAll('.view');
+            views.forEach(function(v) { v.classList.remove('active-view'); });
+
+            var navs = document.querySelectorAll('.nav-item');
+            navs.forEach(function(n) { n.classList.remove('active'); });
+
+            document.getElementById('view-' + tab).classList.add('active-view');
+            document.getElementById('nav-' + tab).classList.add('active');
+
+            if (tab !== 'detail') {
+                document.getElementById('player-container').innerHTML = '';
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function openPlayer(name, url) {
+            document.getElementById('video-name').innerText = name;
+            var box = document.getElementById('player-container');
+            if (url) {
+                box.innerHTML = '<video controls autoplay playsinline style="width:100%; height:100%;"><source src="' + url + '"></video>';
+            } else {
+                box.innerHTML = '<p>ভিডিওর লিংক পাওয়া যায়নি!</p>';
+            }
+            switchTab('detail');
+        }
+
+        function playVipVideo(name, url) {
+            if (isVip()) {
+                openPlayer(name, url);
+            } else if (coins >= 1500) {
+                if (confirm('Pay 1,500 Coins for VIP video?')) {
+                    coins -= 1500;
+                    updateUI();
+                    openPlayer(name, url);
+                }
+            } else {
+                alert('You need 1,500 Ass Coins or Premium Pass!');
+                switchTab('shop');
+            }
+        }
+
+        function runTask(btn, time, reward, label) {
+            var btns = document.querySelectorAll('.task-btn');
+            btns.forEach(function(b) { b.disabled = true; });
+
+            var t = time;
+            btn.innerText = "Wait " + t + "s";
+            var timer = setInterval(function() {
+                t--;
+                if (t > 0) {
+                    btn.innerText = "Wait " + t + "s";
+                } else {
+                    clearInterval(timer);
+                    coins += reward;
+                    updateUI();
+                    alert('Added ' + reward + ' Coins!');
+                    btns.forEach(function(b) { b.disabled = false; });
+                    btn.innerText = label;
+                }
+            }, 1000);
+        }
+
+        function buyPremium(cost, days, name) {
+            if (coins >= cost) {
+                coins -= cost;
+                var ms = days * 86400000;
+                vipExpiry = isVip() ? vipExpiry + ms : new Date().getTime() + ms;
+                updateUI();
+                alert('Purchased ' + name + '!');
+            } else {
+                alert('Not enough Coins!');
+            }
+        }
+
+        function buyWithStars(stars, coinsReward) {
+            coins += coinsReward;
+            updateUI();
+            alert('Success! Received ' + coinsReward + ' Coins (20% Bonus Included)!');
+        }
+
+        function calcDep() {
+            var amt = parseFloat(document.getElementById('dep-amt').value) || 0;
+            var totalCoins = amt * 1200;
+            document.getElementById('dep-res').innerText = "Coins to receive: " + totalCoins + " (Includes 20% Bonus)";
+        }
+
+        function openTonkeeper() {
+            var amt = parseFloat(document.getElementById('dep-amt').value);
+            if (!amt || amt <= 0) return alert('দয়া করে প্রথমে সঠিক পরিমাণ TON লিখুন!');
+
+            var nano = Math.floor(amt * 1000000000);
+            var confirmUrl = "https://app.tonkeeper.com/transfer/" + WALLET + "?amount=" + nano + "&text=DepositCoin";
+
+            window.open(confirmUrl, '_blank');
+        }
+
+        function verifyAndClaim() {
+            var amt = parseFloat(document.getElementById('dep-amt').value);
+            var txHash = document.getElementById('tx-hash-input').value.trim();
+
+            if (!amt || amt <= 0) {
+                return alert('দয়া করে ডিপোজিট অ্যামাউন্ট লিখুন!');
+            }
+            if (!txHash) {
+                return alert('দয়া করে টোনকিপার থেকে ট্রানজেকশন হ্যাস (TxID) এখানে দিন!');
+            }
+
+            if (txHash.length < 10) {
+                return alert('ভুল ট্রানজেকশন হ্যাস! দয়া করে সঠিক হ্যাস দিন।');
+            }
+
+            if (usedHashes.includes(txHash)) {
+                return alert('এই ট্রানজেকশন হ্যাসটি ইতিমধ্যে একবার ব্যবহার করা হয়েছে!');
+            }
+
+            var earnedCoins = amt * 1200;
+            
+            usedHashes.push(txHash);
+            localStorage.setItem('used_hashes', JSON.stringify(usedHashes));
+
+            coins += earnedCoins;
+            updateUI();
+
+            alert('ভেরিফিকেশন সফল!\nআপনার অ্যাকাউন্টে ২০% বোনাসসহ ' + earnedCoins + ' Ass Coins যোগ করা হয়েছে।');
+            
+            document.getElementById('dep-amt').value = '';
+            document.getElementById('tx-hash-input').value = '';
+            calcDep();
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
